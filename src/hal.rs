@@ -8,7 +8,7 @@ use core::time::Duration;
 ///
 /// Implementations of this trait must follow the "implementation safety" requirements documented
 /// for each method. Callers must follow the safety requirements documented for the unsafe methods.
-pub unsafe trait IxgbeHal
+pub unsafe trait IgbHal
 where
     Self: Sized,
 {

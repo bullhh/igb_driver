@@ -4,32 +4,37 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 #![allow(dead_code)]
+#![feature(const_mut_refs)]
+#![feature(const_slice_from_raw_parts_mut)]
 
 mod constants;
 mod descriptor;
 mod hal;
 mod interrupts;
-mod ixgbe;
+mod igb;
 mod memory;
+
+mod net_buf;
+pub mod net_igb;
 
 extern crate alloc;
 #[macro_use]
 extern crate log;
 
-pub use hal::IxgbeHal;
-pub use ixgbe::{IxgbeDevice, IxgbeNetBuf};
+pub use hal::IgbHal;
+pub use igb::{IgbDevice, IgbNetBuf};
 
 pub use memory::{alloc_pkt, MemPool, PhysAddr};
 
 /// Vendor ID for Intel.
 pub const INTEL_VEND: u16 = 0x8086;
 
-/// Device ID for the 82599ES, used to identify the device from the PCI space.
-pub const INTEL_82599: u16 = 0x10FB;
+/// Device ID for the 82576, used to identify the device from the PCI space.
+pub const INTEL_82576: u16 = 0x10C9;
 
 #[derive(Debug)]
 /// Error type for Ixgbe functions.
-pub enum IxgbeError {
+pub enum IgbError {
     /// Queue size is not aligned.
     QueueNotAligned,
     /// Threr are not enough descriptors available in the queue, try again later.
@@ -45,10 +50,10 @@ pub enum IxgbeError {
 }
 
 /// Result type for Ixgbe functions.
-pub type IxgbeResult<T = ()> = Result<T, IxgbeError>;
+pub type IgbResult<T = ()> = Result<T, IgbError>;
 
 /// Used for implementing an ixy device driver like ixgbe or virtio.
-pub trait NicDevice<H: IxgbeHal> {
+pub trait NicDevice<H: IgbHal> {
     /// Returns the driver's name.
     fn get_driver_name(&self) -> &str;
 
@@ -62,24 +67,24 @@ pub trait NicDevice<H: IxgbeHal> {
     fn get_link_speed(&self) -> u16;
 
     /// Pool the transmit queue for sent packets and free their buffers.
-    fn recycle_tx_buffers(&mut self, queue_id: u16) -> IxgbeResult;
+    fn recycle_tx_buffers(&mut self, queue_id: u16) -> IgbResult;
 
     /// Receives `packet_nums` [`RxBuffer`] from network. If currently no data, returns an error
     /// with type [`IxgbeError::NotReady`], else returns the number of received packets. clourse `f` will
     /// be called for avoiding too many dynamic memory allocations.
-    fn receive_packets<F>(&mut self, queue_id: u16, packet_nums: usize, f: F) -> IxgbeResult<usize>
+    fn receive_packets<F>(&mut self, queue_id: u16, packet_nums: usize, f: F) -> IgbResult<usize>
     where
-        F: FnMut(IxgbeNetBuf);
+        F: FnMut(IgbNetBuf);
 
     /// Sends a [`TxBuffer`] to network. If currently queue is full, returns an
     /// error with type [`IxgbeError::QueueFull`].
-    fn send(&mut self, queue_id: u16, tx_buf: IxgbeNetBuf) -> IxgbeResult;
+    fn send(&mut self, queue_id: u16, tx_buf: IgbNetBuf) -> IgbResult;
 
     /// Whether can receive packet.
-    fn can_receive(&self, queue_id: u16) -> IxgbeResult<bool>;
+    fn can_receive(&self, queue_id: u16) -> IgbResult<bool>;
 
     /// Whether can send packet.
-    fn can_send(&self, queue_id: u16) -> IxgbeResult<bool>;
+    fn can_send(&self, queue_id: u16) -> IgbResult<bool>;
 }
 
 /// Holds network card stats about sent and received packets.

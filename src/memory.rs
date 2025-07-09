@@ -3,8 +3,8 @@ use core::ops::{Deref, DerefMut};
 use core::ptr::NonNull;
 use core::{cell::RefCell, marker::PhantomData};
 
-use crate::hal::IxgbeHal;
-use crate::{IxgbeError, IxgbeResult};
+use crate::hal::IgbHal;
+use crate::{IgbError, IgbResult};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use alloc::{fmt, slice};
@@ -36,7 +36,7 @@ impl MemPool {
     /// # Panics
     ///
     /// Panics if `size` is not a divisor of the page size.
-    pub fn allocate<H: IxgbeHal>(entries: usize, size: usize) -> IxgbeResult<Arc<MemPool>> {
+    pub fn allocate<H: IgbHal>(entries: usize, size: usize) -> IgbResult<Arc<MemPool>> {
         let entry_size = match size {
             0 => 2048,
             x => x,
@@ -44,7 +44,7 @@ impl MemPool {
 
         if HUGE_PAGE_SIZE % entry_size != 0 {
             error!("entry size must be a divisor of the page size");
-            return Err(IxgbeError::PageNotAligned);
+            return Err(IgbError::PageNotAligned);
         }
 
         let dma = Dma::<u8, H>::allocate(entries * entry_size, false)?;
@@ -116,14 +116,14 @@ impl MemPool {
     }
 }
 
-pub struct Dma<T, H: IxgbeHal> {
+pub struct Dma<T, H: IgbHal> {
     pub virt: *mut T,
     pub phys: usize,
     _marker: PhantomData<H>,
 }
 
-impl<T, H: IxgbeHal> Dma<T, H> {
-    pub fn allocate(size: usize, _require_contiguous: bool) -> IxgbeResult<Dma<T, H>> {
+impl<T, H: IgbHal> Dma<T, H> {
+    pub fn allocate(size: usize, _require_contiguous: bool) -> IgbResult<Dma<T, H>> {
         // let size = if size % HUGE_PAGE_SIZE != 0 {
         //     ((size >> HUGE_PAGE_BITS) + 1) << HUGE_PAGE_BITS
         // } else {
